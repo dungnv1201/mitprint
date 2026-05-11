@@ -1,0 +1,43 @@
+; MitPrint.inf — Printer driver INF for MitPrint Virtual Printer
+; For use with pnputil /add-driver or manual AddPrinterDriver
+
+[Version]
+Signature      = "$Windows NT$"
+Class          = Printer
+ClassGUID      = {4D36E979-E325-11CE-BFC1-08002BE10318}
+Provider       = %MitPrintProvider%
+DriverVer      = 05/04/2026,1.0.0.0
+PnpLockDown    = 1
+; CatalogFile = MitPrint.cat   ; Uncomment after code-signing
+
+[Manufacturer]
+%MitPrintProvider% = MitPrint.Models,NTamd64
+
+[MitPrint.Models.NTamd64]
+%MitPrint.DriverDesc% = MitPrint_Install,MitPrint_Device
+
+[MitPrint_Install]
+CopyFiles = MitPrint.DriversFiles
+
+[MitPrint_Install.hw]
+
+[MitPrint_Install.Services]
+; No service — this is a user-mode port monitor printer
+
+[MitPrint.DriversFiles]
+MitPrint.gpd
+; UNIDRV.DLL and UNIDRVUI.DLL are already in system driver store
+
+[DestinationDirs]
+MitPrint.DriversFiles = 66000   ; %SYSTEMROOT%\System32\spool\drivers\x64\3
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+MitPrint.gpd = 1
+
+[Strings]
+MitPrintProvider    = "MitPrint Software"
+MitPrint.DriverDesc = "MitPrint Driver"
+DiskName            = "MitPrint Driver Disk"

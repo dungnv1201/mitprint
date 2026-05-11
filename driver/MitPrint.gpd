@@ -1,0 +1,144 @@
+*GPDSpecVersion: "1.0"
+*GPDFileName: "MitPrint.gpd"
+*GPDFileVersion: "1.0"
+*ModelName: "MitPrint Driver"
+*MasterUnits: PAIR(1200, 1200)
+*ResourceDLL: "unires.dll"
+*PrinterType: PAGE
+*MaxCopies: 999
+
+*%=============================================================================
+*% Paper Sizes
+*%=============================================================================
+*Feature: PaperSize
+{
+    *rcNameID: =PAPER_SIZE_DISPLAY
+    *DefaultOption: A4
+
+    *Option: A4
+    {
+        *rcNameID: =A4_DISPLAY
+        *PrintableArea: PAIR(9340, 13240)
+        *PrintableOrigin: PAIR(150, 150)
+        *switch: Orientation
+        {
+            *case: LANDSCAPE_CC90
+            {
+                *PrintableArea: PAIR(13240, 9340)
+                *PrintableOrigin: PAIR(150, 150)
+            }
+        }
+    }
+
+    *Option: LETTER
+    {
+        *rcNameID: =LETTER_DISPLAY
+        *PrintableArea: PAIR(9600, 12480)
+        *PrintableOrigin: PAIR(150, 150)
+        *switch: Orientation
+        {
+            *case: LANDSCAPE_CC90
+            {
+                *PrintableArea: PAIR(12480, 9600)
+                *PrintableOrigin: PAIR(150, 150)
+            }
+        }
+    }
+
+    *Option: A3
+    {
+        *rcNameID: =A3_DISPLAY
+        *PrintableArea: PAIR(13340, 18980)
+        *PrintableOrigin: PAIR(150, 150)
+    }
+
+    *Option: LEGAL
+    {
+        *rcNameID: =LEGAL_DISPLAY
+        *PrintableArea: PAIR(9600, 15984)
+        *PrintableOrigin: PAIR(150, 150)
+    }
+}
+
+*%=============================================================================
+*% Orientation
+*%=============================================================================
+*Feature: Orientation
+{
+    *rcNameID: =ORIENTATION_DISPLAY
+    *DefaultOption: PORTRAIT
+
+    *Option: PORTRAIT
+    {
+        *rcNameID: =PORTRAIT_DISPLAY
+        *RotateRaster?: FALSE
+    }
+
+    *Option: LANDSCAPE_CC90
+    {
+        *rcNameID: =LANDSCAPE_DISPLAY
+        *RotateRaster?: TRUE
+    }
+}
+
+*%=============================================================================
+*% Duplex
+*%=============================================================================
+*Feature: Duplex
+{
+    *rcNameID: =DUPLEX_DISPLAY
+    *DefaultOption: NONE
+
+    *Option: NONE
+    {
+        *rcNameID: =NONE_DISPLAY
+    }
+
+    *Option: VERTICAL
+    {
+        *rcNameID: =DUPLEX_LONG_DISPLAY
+    }
+
+    *Option: HORIZONTAL
+    {
+        *rcNameID: =DUPLEX_SHORT_DISPLAY
+    }
+}
+
+*%=============================================================================
+*% Resolution
+*%=============================================================================
+*Feature: Resolution
+{
+    *rcNameID: =RESOLUTION_DISPLAY
+    *DefaultOption: Option1
+
+    *Option: Option1
+    {
+        *Name: "600 dpi"
+        *DPI: PAIR(600, 600)
+        *TextDPI: PAIR(600, 600)
+        *SpotDiameter: 100
+    }
+
+    *Option: Option2
+    {
+        *Name: "300 dpi"
+        *DPI: PAIR(300, 300)
+        *TextDPI: PAIR(300, 300)
+        *SpotDiameter: 100
+    }
+}
+
+*%=============================================================================
+*% Copies
+*%=============================================================================
+*Feature: Copies
+{
+    *rcNameID: =NUM_OF_COPIES_DISPLAY
+    *DefaultOption: 1
+
+    *Option: 1 { *Name: "1" *NumOfCopies: 1 }
+    *Option: 2 { *Name: "2" *NumOfCopies: 2 }
+    *Option: 5 { *Name: "5" *NumOfCopies: 5 }
+}

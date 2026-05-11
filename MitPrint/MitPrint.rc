@@ -1,0 +1,74 @@
+#include "resource.h"
+#include <windows.h>
+#include <commctrl.h>
+
+/////////////////////////////////////////////////////////////////////////////
+// Icons
+IDI_APP   ICON "res\\app_icon.ico"
+IDI_TRAY  ICON "res\\tray_icon.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+// String Table
+STRINGTABLE
+BEGIN
+    IDS_APP_NAME        "MitPrint"
+    IDS_TRAY_TOOLTIP    "MitPrint - Virtual Printer"
+    IDS_JOB_PRINTING    "Đang in..."
+    IDS_JOB_DONE        "Đã in xong"
+    IDS_JOB_FAILED      "Lỗi in"
+    IDS_JOB_CANCELLED   "Đã huỷ"
+    IDS_JOB_QUEUED      "Đang chờ"
+    IDS_COL_NUM         "#"
+    IDS_COL_DOCUMENT    "Tài liệu"
+    IDS_COL_USER        "Người dùng"
+    IDS_COL_STATUS      "Trạng thái"
+    IDS_COL_TIME        "Thời gian"
+END
+
+/////////////////////////////////////////////////////////////////////////////
+// Print Queue Dialog
+IDD_PRINT_QUEUE DIALOGEX 0, 0, 420, 240
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
+CAPTION "Hàng đợi in - MitPrint"
+FONT 9, "Segoe UI"
+BEGIN
+    CONTROL "", IDC_LIST_JOBS, "SysListView32",
+                LVS_REPORT | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP,
+                7, 7, 406, 195
+    PUSHBUTTON "Huỷ lệnh in", IDC_BTN_CANCEL_JOB, 7, 210, 80, 22
+    PUSHBUTTON "Làm mới",     IDC_BTN_REFRESH,    94, 210, 60, 22
+    LTEXT "",                  IDC_STATIC_STATUS,  200, 215, 213, 14
+END
+
+/////////////////////////////////////////////////////////////////////////////
+// Settings Dialog
+IDD_SETTINGS DIALOGEX 0, 0, 340, 220
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Cài đặt máy in - MitPrint"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT "Máy in đích:",    -1,           7,   12, 65, 10
+    COMBOBOX IDC_COMBO_PRINTER,            75,  9,  185, 120,
+             CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+
+    LTEXT "Khổ giấy:",       -1,           7,   36, 65, 10
+    COMBOBOX IDC_COMBO_PAPER,              75,  33, 185, 120,
+             CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+
+    LTEXT "Số bản in:",      -1,           7,   60, 65, 10
+    EDITTEXT IDC_EDIT_COPIES,              75,  57, 40,  14, ES_NUMBER | WS_TABSTOP
+    CONTROL  "", IDC_SPIN_COPIES, "msctls_updown32",
+             UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_ARROWKEYS,
+             112, 57, 12, 14
+
+    AUTOCHECKBOX "In 2 mặt", IDC_CHECK_DUPLEX, 7,   84, 65, 14
+    COMBOBOX IDC_COMBO_DUPLEX,             75,  81, 185, 60,
+             CBS_DROPDOWNLIST | WS_TABSTOP
+
+    LTEXT "Hướng giấy:",     -1,           7,  108, 65, 10
+    COMBOBOX IDC_COMBO_ORIENT,             75, 105, 185, 60,
+             CBS_DROPDOWNLIST | WS_TABSTOP
+
+    PUSHBUTTON "Áp dụng",    IDC_BTN_APPLY, 200, 190, 60, 22
+    PUSHBUTTON "Đóng",       IDCANCEL,      268, 190, 60, 22
+END
