@@ -14,4 +14,5 @@ constexpr UINT WM_MIT_JOB_ADDED       = WM_USER + 101;
 constexpr UINT WM_MIT_JOB_STATUS      = WM_USER + 102;
 constexpr UINT WM_MIT_SHOW_QUEUE      = WM_USER + 103;
 constexpr UINT WM_MIT_SHOW_SETTINGS   = WM_USER + 104;
+constexpr UINT WM_MIT_JOB_ACTION      = WM_USER + 105; // wparam=jobId: show action dialog
 

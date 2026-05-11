@@ -13,62 +13,78 @@ STRINGTABLE
 BEGIN
     IDS_APP_NAME        "MitPrint"
     IDS_TRAY_TOOLTIP    "MitPrint - Virtual Printer"
-    IDS_JOB_PRINTING    "Đang in..."
-    IDS_JOB_DONE        "Đã in xong"
-    IDS_JOB_FAILED      "Lỗi in"
-    IDS_JOB_CANCELLED   "Đã huỷ"
-    IDS_JOB_QUEUED      "Đang chờ"
+    IDS_JOB_PRINTING    "Printing..."
+    IDS_JOB_DONE        "Done"
+    IDS_JOB_FAILED      "Failed"
+    IDS_JOB_CANCELLED   "Cancelled"
+    IDS_JOB_QUEUED      "Queued"
     IDS_COL_NUM         "#"
-    IDS_COL_DOCUMENT    "Tài liệu"
-    IDS_COL_USER        "Người dùng"
-    IDS_COL_STATUS      "Trạng thái"
-    IDS_COL_TIME        "Thời gian"
+    IDS_COL_DOCUMENT    "Document"
+    IDS_COL_USER        "User"
+    IDS_COL_STATUS      "Status"
+    IDS_COL_TIME        "Time"
 END
 
 /////////////////////////////////////////////////////////////////////////////
 // Print Queue Dialog
 IDD_PRINT_QUEUE DIALOGEX 0, 0, 420, 240
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
-CAPTION "Hàng đợi in - MitPrint"
+CAPTION "Print Queue - MitPrint"
 FONT 9, "Segoe UI"
 BEGIN
     CONTROL "", IDC_LIST_JOBS, "SysListView32",
                 LVS_REPORT | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP,
                 7, 7, 406, 195
-    PUSHBUTTON "Huỷ lệnh in", IDC_BTN_CANCEL_JOB, 7, 210, 80, 22
-    PUSHBUTTON "Làm mới",     IDC_BTN_REFRESH,    94, 210, 60, 22
-    LTEXT "",                  IDC_STATIC_STATUS,  200, 215, 213, 14
+    PUSHBUTTON "Cancel Job",  IDC_BTN_CANCEL_JOB, 7, 210, 70, 22
+    PUSHBUTTON "Refresh",     IDC_BTN_REFRESH,    84, 210, 55, 22
+    LTEXT "",                 IDC_STATIC_STATUS,  200, 215, 213, 14
+END
+
+/////////////////////////////////////////////////////////////////////////////
+// Print Action Dialog
+IDD_PRINT_ACTION DIALOGEX 0, 0, 300, 100
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "MitPrint - New Print Job"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT "Document:",        -1,                   7,  10, 48, 10
+    LTEXT "",  IDC_STATIC_DOC_NAME,                58,  10, 232, 10
+    LTEXT "",  IDC_STATIC_DOC_INFO,                 7,  24, 283, 10
+
+    PUSHBUTTON "Save as PDF",    IDC_BTN_SAVE_PDF,      7, 70, 84, 22
+    PUSHBUTTON "Print",          IDC_BTN_PRINT_REAL,   98, 70, 60, 22
+    PUSHBUTTON "Cancel",         IDC_BTN_CANCEL_ACTION,189, 70, 55, 22
 END
 
 /////////////////////////////////////////////////////////////////////////////
 // Settings Dialog
 IDD_SETTINGS DIALOGEX 0, 0, 340, 220
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Cài đặt máy in - MitPrint"
+CAPTION "MitPrint - Printer Settings"
 FONT 9, "Segoe UI"
 BEGIN
-    LTEXT "Máy in đích:",    -1,           7,   12, 65, 10
-    COMBOBOX IDC_COMBO_PRINTER,            75,  9,  185, 120,
+    LTEXT "Target Printer:",  -1,           7,   12, 65, 10
+    COMBOBOX IDC_COMBO_PRINTER,            75,   9, 185, 120,
              CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
 
-    LTEXT "Khổ giấy:",       -1,           7,   36, 65, 10
+    LTEXT "Paper Size:",      -1,           7,   36, 65, 10
     COMBOBOX IDC_COMBO_PAPER,              75,  33, 185, 120,
              CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
 
-    LTEXT "Số bản in:",      -1,           7,   60, 65, 10
+    LTEXT "Copies:",          -1,           7,   60, 65, 10
     EDITTEXT IDC_EDIT_COPIES,              75,  57, 40,  14, ES_NUMBER | WS_TABSTOP
     CONTROL  "", IDC_SPIN_COPIES, "msctls_updown32",
              UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_ARROWKEYS,
              112, 57, 12, 14
 
-    AUTOCHECKBOX "In 2 mặt", IDC_CHECK_DUPLEX, 7,   84, 65, 14
+    AUTOCHECKBOX "Duplex",    IDC_CHECK_DUPLEX, 7,   84, 65, 14
     COMBOBOX IDC_COMBO_DUPLEX,             75,  81, 185, 60,
              CBS_DROPDOWNLIST | WS_TABSTOP
 
-    LTEXT "Hướng giấy:",     -1,           7,  108, 65, 10
+    LTEXT "Orientation:",     -1,           7,  108, 65, 10
     COMBOBOX IDC_COMBO_ORIENT,             75, 105, 185, 60,
              CBS_DROPDOWNLIST | WS_TABSTOP
 
-    PUSHBUTTON "Áp dụng",    IDC_BTN_APPLY, 200, 190, 60, 22
-    PUSHBUTTON "Đóng",       IDCANCEL,      268, 190, 60, 22
+    PUSHBUTTON "Apply",       IDC_BTN_APPLY, 200, 190, 55, 22
+    PUSHBUTTON "Close",       IDCANCEL,      262, 190, 55, 22
 END

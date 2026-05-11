@@ -9,11 +9,19 @@ enum class JobStatus
 {
     Queued = 0,
     Receiving,
-    ReadyToPrint,
+    ReadyToPrint,   // data complete, waiting for user action
     Printing,
     Done,
     Failed,
     Cancelled
+};
+
+enum class JobAction
+{
+    Pending = 0,
+    SavePdf,
+    PrintToReal,
+    Cancel
 };
 
 struct PrintJob
@@ -26,6 +34,11 @@ struct PrintJob
     SYSTEMTIME      submitTime   = {};
     std::wstring    tempFilePath;
     HANDLE          hTempFile    = INVALID_HANDLE_VALUE;
+
+    // Set by action dialog before signaling hActionEvent
+    JobAction       action       = JobAction::Pending;
+    std::wstring    pdfOutputPath;
+    HANDLE          hActionEvent = nullptr; // signaled when user picks action
 };
 
 class CJobProcessor
@@ -45,6 +58,9 @@ public:
     // Called by UI
     std::map<DWORD, PrintJob> GetJobsCopy();
     const PrintJob* FindJob(DWORD jobId);
+
+    // Called by action dialog to deliver user's choice
+    void SetJobAction(DWORD jobId, JobAction action, const wchar_t* pdfPath = nullptr);
 
 private:
     HWND              m_hNotifyWnd = nullptr;

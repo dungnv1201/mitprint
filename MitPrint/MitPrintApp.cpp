@@ -1,11 +1,14 @@
 #include <afxwin.h>
 #include <afxext.h>
 #include "MitPrintApp.h"
+#include "JobProcessor.h"
 #include "protocol.h"
 #include "PrintQueueDlg.h"
+#include "PrintActionDlg.h"
 #include "SettingsDlg.h"
 #include "resource.h"
 #include "mit_guids.h"
+#include "MitLog.h"
 
 BEGIN_MESSAGE_MAP(CMitPrintApp, CWinApp)
 END_MESSAGE_MAP()
@@ -21,6 +24,7 @@ CMitPrintApp::~CMitPrintApp()
 BOOL CMitPrintApp::InitInstance()
 {
     CWinApp::InitInstance();
+    MitLog("MitPrint starting (pid=%u)", GetCurrentProcessId());
 
     // Enforce single instance
     m_hMutex = CreateMutexW(nullptr, TRUE, MIT_MUTEX_NAME);
@@ -131,13 +135,29 @@ LRESULT CALLBACK CMitPrintApp::MsgWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM
         return 0;
     }
 
+    case WM_MIT_JOB_ACTION:
+        // Show action dialog: Save PDF / Print to real printer / Cancel
+        MitLog("WM_MIT_JOB_ACTION: jobId=%u pApp=%p", (DWORD)wp, pApp);
+        if (pApp)
+        {
+            // Notify user via tray balloon first (dialog may appear behind other windows)
+            pApp->m_trayIcon.ShowBalloon(L"MitPrint", L"New print job — click to choose action", NIIF_INFO);
+            CPrintActionDlg dlg(nullptr, &pApp->m_jobProc, (DWORD)wp);
+            int modalRet = dlg.DoModal();
+            MitLog("WM_MIT_JOB_ACTION: DoModal returned %d (jobId=%u)", modalRet, (DWORD)wp);
+            if (modalRet == -1)
+            {
+                // Dialog creation failed — cancel the job
+                MitLog("WM_MIT_JOB_ACTION: dialog creation FAILED, LastError=%u", GetLastError());
+                pApp->m_jobProc.SetJobAction((DWORD)wp, JobAction::Cancel);
+            }
+        }
+        return 0;
+
     case WM_MIT_JOB_ADDED:
     case WM_MIT_JOB_STATUS:
-        // Balloon notification on status change
-        if (pApp && lp == 2 /*STATUS_DONE*/)
-        {
-            // pApp->m_trayIcon.ShowBalloon(L"MitPrint", L"Đã in xong", NIIF_INFO);
-        }
+        if (pApp && lp == (DWORD)JobStatus::Done)
+            pApp->m_trayIcon.ShowBalloon(L"MitPrint", L"Print job completed", NIIF_INFO);
         return 0;
 
     case WM_MIT_SHOW_SETTINGS:
@@ -180,10 +200,10 @@ LRESULT CALLBACK CMitPrintApp::MsgWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM
 void CMitPrintApp::ShowContextMenu(HWND hwnd)
 {
     HMENU hMenu = CreatePopupMenu();
-    AppendMenuW(hMenu, MF_STRING, IDM_OPEN_QUEUE,  L"Mở hàng đợi in");
-    AppendMenuW(hMenu, MF_STRING, IDM_SETTINGS,    L"Cài đặt...");
+    AppendMenuW(hMenu, MF_STRING, IDM_OPEN_QUEUE,  L"Open Print Queue");
+    AppendMenuW(hMenu, MF_STRING, IDM_SETTINGS,    L"Settings...");
     AppendMenuW(hMenu, MF_SEPARATOR, 0,            nullptr);
-    AppendMenuW(hMenu, MF_STRING, IDM_EXIT,        L"Thoát");
+    AppendMenuW(hMenu, MF_STRING, IDM_EXIT,        L"Exit");
 
     POINT pt;
     GetCursorPos(&pt);

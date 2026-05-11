@@ -101,17 +101,37 @@ void CPipeServer::IoThread()
             continue;
         }
 
-        // Read messages until client disconnects
+        // Read messages until client disconnects.
+        // Use overlapped ReadFile so we can interrupt on stop event.
         std::vector<BYTE> buf(MIT_PIPE_BUF_SIZE * 4);
+        OVERLAPPED ovRead = {};
+        ovRead.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+
         while (m_bRunning)
         {
+            ResetEvent(ovRead.hEvent);
             DWORD bytesRead = 0;
-            BOOL ok = ReadFile(hPipe, buf.data(), (DWORD)buf.size(), &bytesRead, nullptr);
-            if (!ok || bytesRead == 0) break;
-
+            BOOL ok = ReadFile(hPipe, buf.data(), (DWORD)buf.size(), &bytesRead, &ovRead);
+            if (!ok)
+            {
+                DWORD err = GetLastError();
+                if (err == ERROR_IO_PENDING)
+                {
+                    HANDLE waitH[2] = { ovRead.hEvent, m_hStopEvent };
+                    if (WaitForMultipleObjects(2, waitH, FALSE, INFINITE) != WAIT_OBJECT_0)
+                    {
+                        CancelIo(hPipe);
+                        break;
+                    }
+                    ok = GetOverlappedResult(hPipe, &ovRead, &bytesRead, FALSE);
+                }
+                if (!ok) break;
+            }
+            if (bytesRead == 0) break;
             DispatchMessage(buf.data(), bytesRead);
         }
 
+        CloseHandle(ovRead.hEvent);
         DisconnectNamedPipe(hPipe);
         CloseHandle(hPipe);
     }

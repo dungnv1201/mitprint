@@ -12,6 +12,7 @@
 #define IDD_PRINT_QUEUE                 200
 #define IDD_SETTINGS                    201
 #define IDD_ABOUT                       202
+#define IDD_PRINT_ACTION                203
 
 // Print Queue dialog controls
 #define IDC_LIST_JOBS                   1000
@@ -29,6 +30,13 @@
 #define IDC_COMBO_ORIENT                2006
 #define IDC_BTN_APPLY                   2007
 #define IDC_STATIC_PREVIEW              2008
+
+// Print Action dialog controls
+#define IDC_STATIC_DOC_NAME             3000
+#define IDC_STATIC_DOC_INFO             3001
+#define IDC_BTN_SAVE_PDF                3002
+#define IDC_BTN_PRINT_REAL              3003
+#define IDC_BTN_CANCEL_ACTION           3004
 
 // Tray menu
 #define IDM_OPEN_QUEUE                  1001

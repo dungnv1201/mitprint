@@ -5,22 +5,24 @@
 #include <vector>
 #include "PrinterSettingsStore.h"
 
-// EMF spool record types (from [MS-EMFSPOOL] specification)
+// EMF spool record types — MS-EMFSPOOL spec
 enum EmfSpoolRecordType : DWORD
 {
-    EMRI_METAFILE_DATA      = 1,
-    EMRI_FORM_METAFILE      = 2,
-    EMRI_BW_METAFILE        = 3,
-    EMRI_METAFILE_EXT       = 4,
-    EMRI_BW_METAFILE_EXT    = 5,
-    EMRI_DESIGNVECTOR       = 6,
-    EMRI_SUBSET_FONT        = 7,
-    EMRI_DELTA_FONT         = 8,
-    EMRI_FORM_METAFILE_EXT  = 9,
-    EMRI_PRESTARTPAGE       = 10,
-    EMRI_CLIP_METAFILE_EXT  = 11,
-    EMRI_POSTSCRIPT         = 14,
-    EMRI_EOF                = 0,
+    EMRI_METAFILE        = 1,   // EMF metafile (some drivers)
+    EMRI_MIRRORMETAFILE  = 2,
+    EMRI_HEADER          = 3,
+    EMRI_DEVMODE         = 4,
+    EMRI_FONT_DEF_IDEF   = 5,
+    EMRI_DESIGNVECTOR    = 6,
+    EMRI_SUBSET_FONT     = 7,
+    EMRI_DELTA_FONT      = 8,
+    EMRI_TYPE1_FONT      = 9,
+    EMRI_PRESTARTPAGE    = 10,
+    EMRI_DRAWORDER       = 11,
+    EMRI_METAFILE_DATA   = 12,  // EMF page data (main page record)
+    EMRI_METAFILE_EXT    = 13,  // extended EMF page data
+    EMRI_BW_METAFILE_EXT = 14,
+    EMRI_EOF             = 15,
 };
 
 #pragma pack(push, 1)
@@ -42,6 +44,12 @@ struct EmfSpoolRecord
 class CEmfRenderer
 {
 public:
+    // Save print job as PDF using "Microsoft Print To PDF" with output path
+    BOOL RenderToPdf(const wchar_t* pDocName,
+                     const BYTE*    pSpoolData,
+                     DWORD          cbSpoolData,
+                     const wchar_t* pOutputPath);
+
     BOOL RenderToRealPrinter(const wchar_t* pTargetPrinter,
                               const wchar_t* pDocName,
                               const BYTE*    pSpoolData,

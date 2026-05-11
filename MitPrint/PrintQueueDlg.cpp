@@ -28,11 +28,11 @@ BOOL CPrintQueueDlg::OnInitDialog()
     CDialog::OnInitDialog();
 
     // Setup columns
-    m_listJobs.InsertColumn(0, L"#",            LVCFMT_RIGHT,  40);
-    m_listJobs.InsertColumn(1, L"Tài liệu",     LVCFMT_LEFT,  180);
-    m_listJobs.InsertColumn(2, L"Người dùng",   LVCFMT_LEFT,   90);
-    m_listJobs.InsertColumn(3, L"Trạng thái",   LVCFMT_LEFT,   90);
-    m_listJobs.InsertColumn(4, L"Thời gian",    LVCFMT_LEFT,   90);
+    m_listJobs.InsertColumn(0, L"#",         LVCFMT_RIGHT,  40);
+    m_listJobs.InsertColumn(1, L"Document",  LVCFMT_LEFT,  180);
+    m_listJobs.InsertColumn(2, L"User",      LVCFMT_LEFT,   90);
+    m_listJobs.InsertColumn(3, L"Status",    LVCFMT_LEFT,   90);
+    m_listJobs.InsertColumn(4, L"Time",      LVCFMT_LEFT,   90);
 
     m_listJobs.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
 
@@ -92,13 +92,13 @@ CString CPrintQueueDlg::StatusToString(JobStatus s)
 {
     switch (s)
     {
-    case JobStatus::Queued:        return L"Chờ";
-    case JobStatus::Receiving:     return L"Nhận dữ liệu";
-    case JobStatus::ReadyToPrint:  return L"Sẵn sàng";
-    case JobStatus::Printing:      return L"Đang in";
-    case JobStatus::Done:          return L"Xong";
-    case JobStatus::Failed:        return L"Lỗi";
-    case JobStatus::Cancelled:     return L"Đã huỷ";
+    case JobStatus::Queued:        return L"Queued";
+    case JobStatus::Receiving:     return L"Receiving";
+    case JobStatus::ReadyToPrint:  return L"Waiting";
+    case JobStatus::Printing:      return L"Printing";
+    case JobStatus::Done:          return L"Done";
+    case JobStatus::Failed:        return L"Failed";
+    case JobStatus::Cancelled:     return L"Cancelled";
     default:                       return L"?";
     }
 }

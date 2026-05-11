@@ -3,6 +3,7 @@
 #include "EmfRenderer.h"
 #include "PrinterSettingsStore.h"
 #include "mit_guids.h"
+#include "MitLog.h"
 
 CJobProcessor::CJobProcessor()
 {
@@ -85,12 +86,31 @@ void CJobProcessor::OnEndJob(DWORD jobId)
             CloseHandle(job.hTempFile);
             job.hTempFile = INVALID_HANDLE_VALUE;
         }
+        // Create event so worker thread can wait for user's action choice
+        job.hActionEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
         job.status = JobStatus::ReadyToPrint;
     }
     LeaveCriticalSection(&m_cs);
 
-    NotifyUI(WM_MIT_JOB_STATUS, jobId, (DWORD)JobStatus::ReadyToPrint);
-    SetEvent(m_hWorkEvent);
+    // Ask UI to show the print action dialog; worker waits on hActionEvent
+    MitLog("OnEndJob: jobId=%u posting WM_MIT_JOB_ACTION to hwnd=%p", jobId, m_hNotifyWnd);
+    NotifyUI(WM_MIT_JOB_ACTION, jobId, 0);
+    SetEvent(m_hWorkEvent); // wake worker so it starts waiting
+}
+
+void CJobProcessor::SetJobAction(DWORD jobId, JobAction action, const wchar_t* pdfPath)
+{
+    HANDLE hEvt = nullptr;
+    EnterCriticalSection(&m_cs);
+    auto it = m_jobs.find(jobId);
+    if (it != m_jobs.end())
+    {
+        it->second.action = action;
+        if (pdfPath) it->second.pdfOutputPath = pdfPath;
+        hEvt = it->second.hActionEvent;
+    }
+    LeaveCriticalSection(&m_cs);
+    if (hEvt) SetEvent(hEvt);
 }
 
 void CJobProcessor::CancelJob(DWORD jobId)
@@ -160,19 +180,67 @@ void CJobProcessor::WorkThread()
 
         if (nextJobId == 0) continue;
 
-        // Retrieve job data under lock
-        std::wstring tempPath, docName;
-        EnterCriticalSection(&m_cs);
-        auto it = m_jobs.find(nextJobId);
-        if (it != m_jobs.end())
+        MitLog("WorkThread: picked jobId=%u, waiting for action...", nextJobId);
+
+        // Wait for user to choose action via the action dialog (30s timeout)
+        HANDLE hActionEvt = nullptr;
         {
-            tempPath = it->second.tempFilePath;
-            docName  = it->second.docName;
+            EnterCriticalSection(&m_cs);
+            auto it = m_jobs.find(nextJobId);
+            if (it != m_jobs.end()) hActionEvt = it->second.hActionEvent;
+            LeaveCriticalSection(&m_cs);
         }
-        LeaveCriticalSection(&m_cs);
+        MitLog("WorkThread: jobId=%u hActionEvt=%p", nextJobId, hActionEvt);
+        if (hActionEvt)
+        {
+            DWORD waitRet = WaitForSingleObject(hActionEvt, 30000); // 30s timeout → auto-cancel
+            MitLog("WorkThread: jobId=%u wait result=%u (0=signaled,258=timeout)", nextJobId, waitRet);
+        }
 
-        if (tempPath.empty()) continue;
+        // Retrieve action + job data
+        JobAction   chosenAction = JobAction::Cancel;
+        std::wstring tempPath, docName, pdfPath;
+        {
+            EnterCriticalSection(&m_cs);
+            auto it = m_jobs.find(nextJobId);
+            if (it != m_jobs.end())
+            {
+                chosenAction = it->second.action;
+                tempPath     = it->second.tempFilePath;
+                docName      = it->second.docName;
+                pdfPath      = it->second.pdfOutputPath;
+                if (hActionEvt)
+                {
+                    CloseHandle(hActionEvt);
+                    it->second.hActionEvent = nullptr;
+                }
+            }
+            LeaveCriticalSection(&m_cs);
+        }
 
+        MitLog("WorkThread: jobId=%u chosenAction=%d tempPath=%s",
+               nextJobId, (int)chosenAction, tempPath.empty() ? "EMPTY" : "OK");
+
+        if (chosenAction == JobAction::Cancel ||
+            chosenAction == JobAction::Pending || // timeout — treat as cancel
+            tempPath.empty())
+        {
+            DeleteFileW(tempPath.c_str());
+            EnterCriticalSection(&m_cs);
+            auto it2 = m_jobs.find(nextJobId);
+            if (it2 != m_jobs.end()) it2->second.status = JobStatus::Cancelled;
+            LeaveCriticalSection(&m_cs);
+            NotifyUI(WM_MIT_JOB_STATUS, nextJobId, (DWORD)JobStatus::Cancelled);
+            continue;
+        }
+
+        // Mark as Printing
+        {
+            EnterCriticalSection(&m_cs);
+            auto it = m_jobs.find(nextJobId);
+            if (it != m_jobs.end()) it->second.status = JobStatus::Printing;
+            LeaveCriticalSection(&m_cs);
+        }
         NotifyUI(WM_MIT_JOB_STATUS, nextJobId, (DWORD)JobStatus::Printing);
 
         // Load spool data from temp file
@@ -189,16 +257,24 @@ void CJobProcessor::WorkThread()
                 if (ReadFile(hFile, spoolData.data(), fileSize, &bytesRead, nullptr) &&
                     bytesRead == fileSize)
                 {
-                    CPrinterSettings settings;
-                    CPrinterSettingsStore::Load(settings);
-
                     CEmfRenderer renderer;
-                    printed = renderer.RenderToRealPrinter(
-                        settings.targetPrinter.c_str(),
-                        docName.c_str(),
-                        spoolData.data(),
-                        fileSize,
-                        settings);
+                    if (chosenAction == JobAction::SavePdf)
+                    {
+                        printed = renderer.RenderToPdf(
+                            docName.c_str(),
+                            spoolData.data(), fileSize,
+                            pdfPath.c_str());
+                    }
+                    else // PrintToReal
+                    {
+                        CPrinterSettings settings;
+                        CPrinterSettingsStore::Load(settings);
+                        printed = renderer.RenderToRealPrinter(
+                            settings.targetPrinter.c_str(),
+                            docName.c_str(),
+                            spoolData.data(), fileSize,
+                            settings);
+                    }
                 }
             }
             CloseHandle(hFile);
@@ -206,6 +282,8 @@ void CJobProcessor::WorkThread()
 
         // Cleanup temp file
         DeleteFileW(tempPath.c_str());
+
+        MitLog("WorkThread: jobId=%u render result=%d", nextJobId, (int)printed);
 
         // Update status
         JobStatus finalStatus = printed ? JobStatus::Done : JobStatus::Failed;

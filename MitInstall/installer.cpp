@@ -42,14 +42,29 @@ static void StopSpooler()
     CloseServiceHandle(hSCM);
 }
 
-// Find any already-installed V3 x64 printer driver as fallback
-static BOOL FindAnyV3Driver(wchar_t* pName, DWORD cch)
+// Drivers to skip when looking for fallback (known bad for local config UI)
+static const wchar_t* kBadFallbacks[] = {
+    L"Microsoft enhanced Point and Print compatibility driver",
+    MIT_DRIVER_NAME,
+};
+static BOOL IsBadFallback(const wchar_t* name)
 {
+    for (auto p : kBadFallbacks)
+        if (lstrcmpiW(name, p) == 0) return TRUE;
+    return FALSE;
+}
+
+// Enumerate installed x64 drivers from a given version subkey.
+// Returns TRUE + name of first usable driver found.
+static BOOL FindDriverInVersion(const wchar_t* versionSubkey, wchar_t* pName, DWORD cch)
+{
+    wchar_t regPath[256];
+    StringCchPrintfW(regPath, 256,
+        L"SYSTEM\\CurrentControlSet\\Control\\Print\\Environments"
+        L"\\Windows x64\\Drivers\\%s", versionSubkey);
+
     HKEY hKey = nullptr;
-    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE,
-            L"SYSTEM\\CurrentControlSet\\Control\\Print\\Environments"
-            L"\\Windows x64\\Drivers\\Version-3",
-            0, KEY_READ, &hKey) != ERROR_SUCCESS)
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, regPath, 0, KEY_READ, &hKey) != ERROR_SUCCESS)
         return FALSE;
 
     BOOL  found = FALSE;
@@ -57,11 +72,18 @@ static BOOL FindAnyV3Driver(wchar_t* pName, DWORD cch)
     while (RegEnumKeyExW(hKey, idx++, pName, &cchName,
                          nullptr, nullptr, nullptr, nullptr) == ERROR_SUCCESS)
     {
-        if (lstrcmpiW(pName, MIT_DRIVER_NAME) != 0) { found = TRUE; break; }
+        if (!IsBadFallback(pName)) { found = TRUE; break; }
         cchName = cch;
     }
     RegCloseKey(hKey);
     return found;
+}
+
+// Find a usable V3 fallback driver.
+// V4 drivers are incompatible with V3 port monitors — do NOT use them.
+static BOOL FindFallbackDriver(wchar_t* pName, DWORD cch)
+{
+    return FindDriverInVersion(L"Version-3", pName, cch);
 }
 
 static void StartSpooler()
@@ -86,6 +108,21 @@ static void StartSpooler()
 
 BOOL MitInstall(const wchar_t* pInstallDir)
 {
+    // ---------------------------------------------------------------
+    // Step 0: Delete existing MitPrint printer so we can recreate with
+    //         correct driver (handles upgrade/reinstall scenario)
+    // ---------------------------------------------------------------
+    {
+        PRINTER_DEFAULTS pd = {};
+        pd.DesiredAccess = PRINTER_ALL_ACCESS;
+        HANDLE hOld = nullptr;
+        if (OpenPrinterW((LPWSTR)MIT_PRINTER_NAME, &hOld, &pd))
+        {
+            DeletePrinter(hOld);
+            ClosePrinter(hOld);
+        }
+    }
+
     // ---------------------------------------------------------------
     // Step 1: Get printer driver directory
     // ---------------------------------------------------------------
@@ -230,8 +267,8 @@ BOOL MitInstall(const wchar_t* pInstallDir)
         else
         {
             // Windows 10/11 post-PrintNightmare may block unsigned driver install (3019).
-            // Fall back to any existing V3 driver already trusted by the system.
-            if (FindAnyV3Driver(activeDriverName, 256))
+            // Fall back to any usable driver already trusted by the system.
+            if (FindFallbackDriver(activeDriverName, 256))
             {
                 driverOk = TRUE;
             }
@@ -296,9 +333,9 @@ BOOL MitInstall(const wchar_t* pInstallDir)
     ShellExecuteW(nullptr, L"open", mitExePath, L"/background", nullptr, SW_HIDE);
 
     MessageBoxW(nullptr,
-        L"MitPrint đã được cài đặt thành công!\n\n"
-        L"Máy in ảo \"MitPrint\" đã xuất hiện trong danh sách máy in.\n"
-        L"Mở ứng dụng bất kỳ, chọn File > Print > MitPrint để sử dụng.",
+        L"MitPrint installed successfully!\n\n"
+        L"The virtual printer \"MitPrint\" is now available in your printer list.\n"
+        L"Open any application, choose File > Print > MitPrint to use it.",
         L"MitPrint Setup", MB_OK | MB_ICONINFORMATION);
 
     return TRUE;

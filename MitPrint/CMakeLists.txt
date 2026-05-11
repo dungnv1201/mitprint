@@ -9,6 +9,7 @@ add_executable(MitPrint WIN32
     MitPrintApp.cpp
     TrayIcon.cpp
     PrintQueueDlg.cpp
+    PrintActionDlg.cpp
     SettingsDlg.cpp
     PrinterSettingsStore.cpp
     PipeServer.cpp

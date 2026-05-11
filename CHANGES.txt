@@ -1,0 +1,104 @@
+================================================================
+MITPRINT - SESSION CHANGES SUMMARY
+================================================================
+
+----------------------------------------------------------------
+MitPortMon/job.cpp  (thay doi lon nhat)
+----------------------------------------------------------------
+- MitWritePort: Bo gui DataChunk qua pipe, chi acknowledge bytes
+  (UNIDRV output khong co du lieu EMF thuc su)
+
+- MitStartDocPort: Doc raw .SPL spool file va gui DataChunk thay the
+  + RevertToSelf() truoc khi doc de tranh ACCESS_DENIED
+    (spooler dang impersonate user khi goi StartDocPort)
+  + Tim file .SPL moi nhat trong thu muc thay vi doan ten theo JobId
+    (file number != JobId tren Windows 11, vi du FP00001.SPL voi JobId=3)
+  + Doc registry DefaultSpoolDirectory de lay dung duong dan spool
+
+- MitEndDocPort: Don gian hoa - chi gui EndJob, khong doc spool file
+
+- Them MonLog() function ghi log ra C:\Windows\Temp\MitMon.log
+
+----------------------------------------------------------------
+MitPrint/EmfRenderer.h
+----------------------------------------------------------------
+- Fix toan bo enum EmfSpoolRecordType - tat ca values truoc do SAI
+  so voi MS-EMFSPOOL spec:
+    EMRI_METAFILE_DATA = 12  (truoc la 1)
+    EMRI_METAFILE_EXT  = 13  (truoc la 4)
+    EMRI_EOF           = 15  (truoc la 0)
+
+----------------------------------------------------------------
+MitPrint/EmfRenderer.cpp
+----------------------------------------------------------------
+- ParseEmfSpoolPages: Them log chi tiet tung record (offset, ulID, cjSize)
+  + Dump hex 32 bytes dau
+  + Log header fields: dwVersion, cjSize
+  + Log tung record tim thay
+
+- RenderToPdf va RenderPages: Fix critical bug
+  + nBytes trong EMR_HEADER = 1656 nhung data thuc te chi 1648 bytes
+  + Chenh lech dung 8 bytes = sizeof(EmfSpoolRecord header)
+  + Windows spooler set nBytes = cjSize (bao gom ca 8-byte record header)
+  + Fix: copy data vao buffer, patch nBytes = cbEmfData truoc khi goi
+    SetEnhMetaFileBits -> SetEnhMetaFileBits khong con fail ERROR_INVALID_DATA
+
+- Them log: ParseEmfSpoolPages result, StartDocW return value,
+  SetEnhMetaFileBits handle, PlayEnhMetaFile result, bounds rect
+
+----------------------------------------------------------------
+MitPrint/MitLog.h  (FILE MOI)
+----------------------------------------------------------------
+- Inline logger ghi timestamped ASCII log ra %TEMP%\MitPrint.log
+- Dung OutputDebugStringA dong thoi
+
+----------------------------------------------------------------
+MitPrint/PrintActionDlg.cpp / PrintActionDlg.h  (FILE MOI)
+----------------------------------------------------------------
+- Dialog hien ra khi co print job moi:
+    [Save as PDF] [Print to real printer] [Cancel]
+- Save as PDF: mo GetSaveFileName dialog cho user chon duong dan
+- Print to real printer: kiem tra target printer da config chua,
+  neu chua hien thong bao huong dan vao Settings
+- Them MitLog vao tat ca button handlers
+
+----------------------------------------------------------------
+MitPrint/JobProcessor.cpp / JobProcessor.h
+----------------------------------------------------------------
+- Them MitLog vao: OnEndJob, WorkThread (wait result, chosen action,
+  tempPath, render result)
+- Flow chinh: EndJob nhan duoc -> tao hActionEvent -> post
+  WM_MIT_JOB_ACTION -> worker thread cho user chon action (30s timeout)
+
+----------------------------------------------------------------
+MitPrint/MitPrintApp.cpp
+----------------------------------------------------------------
+- WM_MIT_JOB_ACTION handler: show tray balloon + mo CPrintActionDlg
+- Log ket qua DoModal, log neu dialog creation failed
+- Them log khi app khoi dong (pid)
+
+----------------------------------------------------------------
+dist/update_monitor.bat  (FILE MOI)
+----------------------------------------------------------------
+- Script admin de hot-swap MitPortMon.dll trong qua trinh dev:
+  Stop Spooler -> copy DLL moi vao System32 -> Start Spooler -> launch MitPrint.exe
+- Chi dung cho developer, khong phai cho end user
+
+================================================================
+ROOT CAUSE SUMMARY - 3 BUG CHINH DA FIX
+================================================================
+
+Bug 1: Sai nguon du lieu
+  UNIDRV + GPD khong co output commands -> WritePort chi nhan ~1 byte rac
+  Fix: Doc thang file .SPL tu thu muc spool (port monitor chay as SYSTEM)
+
+Bug 2: Sai enum record IDs trong MS-EMFSPOOL parser
+  EMRI_METAFILE_DATA = 1 (sai) -> khong nhan dien duoc page record (type 12)
+  Fix: Sua lai dung gia tri theo spec: 12, 13, 15
+
+Bug 3: nBytes mismatch trong EMF header
+  SetEnhMetaFileBits fail ERROR_INVALID_DATA vi nBytes=1656 != cbData=1648
+  Windows spooler set nBytes = cjSize (tinh ca 8-byte spool record header)
+  Fix: Patch nBytes = cbEmfData truoc khi goi SetEnhMetaFileBits
+
+================================================================
